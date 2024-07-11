@@ -3,8 +3,9 @@ from flask_cors import CORS
 from firebase_admin import credentials, firestore, storage
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
-from mediapipe.tasks import python
-from mediapipe.tasks.python import text
+from transformers import BertTokenizer, BertForSequenceClassification, AutoModel,TrainingArguments, Trainer
+import torch
+
 
 import os
 
@@ -13,11 +14,19 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 CORS(app)
 
+# Text Classification Prep
+pretrained = "indolem/indobert-base-uncased"
+model_directory = "./gestura_text_model"
+tokenizer = BertTokenizer.from_pretrained(pretrained)
+model = BertForSequenceClassification.from_pretrained(model_directory, use_safetensors=True)
+
+
+
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 # Initialize Firebase
-cred = credentials.Certificate('D:/Dev/sign-language-app/app/src/main/assets/sign-language-app-7bccf-firebase-adminsdk-l25bu-2a41ac811d.json')
+cred = credentials.Certificate('sign-language-app-7bccf-firebase-adminsdk-l25bu-2a41ac811d.json')
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'gs://sign-language-app-7bccf.appspot.com/kamus' 
 })
@@ -126,20 +135,16 @@ def get_video_huruf_by_name(name):
 @app.route('/hate-speech/<text_input>', methods=['GET'])
 def classify_text(text_input):
     try:
-        params = text_input.lower()
-        model_path = 'model.tflite'
-        base_options = python.BaseOptions(model_asset_path=model_path)
-        options = text.TextClassifierOptions(base_options=base_options)
-        classifier = text.TextClassifier.create_from_options(options)
+        inputs = tokenizer(text_input, padding=True, truncation=True, return_tensors="pt")
+        with torch.no_grad():
+            outputs = model(**inputs)
+        logits = outputs.logits
+        prediction = torch.argmax(logits, dim=-1)
+        print(text_input)
+        return jsonify({
+            "result": prediction.item() == 1
+        }), 200
 
-        classification_result = classifier.classify(params)
-        results = classification_result.classifications[0].categories[0].category_name
-        if results:
-            return jsonify({
-                "result": results == "1" 
-            }), 200
-        else:
-            return jsonify({"error": "No video found with the given name"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
