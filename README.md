@@ -19,7 +19,8 @@ Dalam penelitian ini, dirancang dan dibangun sebuah aplikasi penerjemah bahasa i
 ## Instalasi dan Penggunaan
 
 1. **APK**
-   - Download file apk untuk mencoba aplikasi ini
+   - Download file apk untuk mencoba aplikasi ini, berikut link drive untuk mengunduk file apk:
+[gestura/gdrive](https://drive.google.com/drive/folders/1LnUvgSOcjfoEIQYwH98PujsRXgnx3rpQ?usp=sharing)
 
 ## Kontribusi
 
